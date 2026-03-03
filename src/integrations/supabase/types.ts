@@ -14,8 +14,79 @@ export type Database = {
   }
   public: {
     Tables: {
+      food_composition_items: {
+        Row: {
+          contains_gluten: boolean | null
+          contains_lactose: boolean | null
+          created_at: string
+          density_g_ml: number | null
+          food_category: string | null
+          id: string
+          is_allergen_crustaceans: boolean | null
+          is_allergen_egg: boolean | null
+          is_allergen_fish: boolean | null
+          is_allergen_milk: boolean | null
+          is_allergen_peanut: boolean | null
+          is_allergen_soy: boolean | null
+          is_allergen_tree_nuts: boolean | null
+          is_allergen_wheat: boolean | null
+          name_pt: string
+          per_100: Json
+          source: string
+          source_item_id: string | null
+          synonyms: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          contains_gluten?: boolean | null
+          contains_lactose?: boolean | null
+          created_at?: string
+          density_g_ml?: number | null
+          food_category?: string | null
+          id?: string
+          is_allergen_crustaceans?: boolean | null
+          is_allergen_egg?: boolean | null
+          is_allergen_fish?: boolean | null
+          is_allergen_milk?: boolean | null
+          is_allergen_peanut?: boolean | null
+          is_allergen_soy?: boolean | null
+          is_allergen_tree_nuts?: boolean | null
+          is_allergen_wheat?: boolean | null
+          name_pt: string
+          per_100?: Json
+          source?: string
+          source_item_id?: string | null
+          synonyms?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          contains_gluten?: boolean | null
+          contains_lactose?: boolean | null
+          created_at?: string
+          density_g_ml?: number | null
+          food_category?: string | null
+          id?: string
+          is_allergen_crustaceans?: boolean | null
+          is_allergen_egg?: boolean | null
+          is_allergen_fish?: boolean | null
+          is_allergen_milk?: boolean | null
+          is_allergen_peanut?: boolean | null
+          is_allergen_soy?: boolean | null
+          is_allergen_tree_nuts?: boolean | null
+          is_allergen_wheat?: boolean | null
+          name_pt?: string
+          per_100?: Json
+          source?: string
+          source_item_id?: string | null
+          synonyms?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ingredients: {
         Row: {
+          composition_source: string | null
+          composition_source_id: string | null
           contains_gluten: boolean | null
           contains_lactose: boolean | null
           created_at: string
@@ -37,6 +108,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          composition_source?: string | null
+          composition_source_id?: string | null
           contains_gluten?: boolean | null
           contains_lactose?: boolean | null
           created_at?: string
@@ -58,6 +131,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          composition_source?: string | null
+          composition_source_id?: string | null
           contains_gluten?: boolean | null
           contains_lactose?: boolean | null
           created_at?: string
@@ -78,7 +153,15 @@ export type Database = {
           synonyms?: string[] | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ingredients_composition_source_id_fkey"
+            columns: ["composition_source_id"]
+            isOneToOne: false
+            referencedRelation: "food_composition_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -250,6 +333,30 @@ export type Database = {
     }
     Functions: {
       owns_recipe: { Args: { recipe_uuid: string }; Returns: boolean }
+      search_food_composition: {
+        Args: { max_results?: number; search_term: string }
+        Returns: {
+          contains_gluten: boolean
+          contains_lactose: boolean
+          density_g_ml: number
+          food_category: string
+          id: string
+          is_allergen_crustaceans: boolean
+          is_allergen_egg: boolean
+          is_allergen_fish: boolean
+          is_allergen_milk: boolean
+          is_allergen_peanut: boolean
+          is_allergen_soy: boolean
+          is_allergen_tree_nuts: boolean
+          is_allergen_wheat: boolean
+          name_pt: string
+          per_100: Json
+          similarity_score: number
+          source: string
+        }[]
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       product_type: "solid" | "liquid"
