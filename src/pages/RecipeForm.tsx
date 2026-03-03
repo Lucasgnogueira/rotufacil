@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { convertToGrams } from '@/lib/nutrition-engine';
+import { IngredientSearch } from '@/components/IngredientSearch';
 
 interface IngredientRow {
   id: string;
@@ -24,6 +25,7 @@ interface RecipeItemLocal {
   tempId: string;
   ingredient_id: string;
   ingredient_name: string;
+  ingredient_source?: string;
   qty: number;
   unit: string;
 }
@@ -120,12 +122,21 @@ const RecipeForm = () => {
   const updateItem = (tempId: string, field: string, value: any) => {
     setItems(prev => prev.map(i => {
       if (i.tempId !== tempId) return i;
-      if (field === 'ingredient_id') {
-        const found = allIngredients.find(ig => ig.id === value);
-        return { ...i, ingredient_id: value, ingredient_name: found?.name || '' };
-      }
       return { ...i, [field]: value };
     }));
+  };
+
+  const handleIngredientSelect = (tempId: string, ingredient: { id: string; name: string; source?: string }) => {
+    setItems(prev => prev.map(i => {
+      if (i.tempId !== tempId) return i;
+      return { ...i, ingredient_id: ingredient.id, ingredient_name: ingredient.name, ingredient_source: ingredient.source };
+    }));
+    // Refresh allIngredients to include newly created ones
+    supabase
+      .from('ingredients')
+      .select('id, name, density_g_ml, grams_per_unit')
+      .order('name')
+      .then(({ data }) => { if (data) setAllIngredients(data); });
   };
 
   const handleParse = async () => {
@@ -367,16 +378,14 @@ const RecipeForm = () => {
                   <div key={item.tempId} className="flex items-end gap-2 rounded-md border border-border bg-muted/30 p-3">
                     <div className="flex-1 space-y-1">
                       <Label className="text-xs">Ingrediente</Label>
-                      <select
-                        value={item.ingredient_id}
-                        onChange={e => updateItem(item.tempId, 'ingredient_id', e.target.value)}
-                        className={`w-full rounded-md border px-2 py-1.5 text-sm ${!item.ingredient_id ? 'border-destructive bg-destructive/5' : 'border-input bg-background'}`}
-                      >
-                        <option value="">Selecionar...</option>
-                        {allIngredients.map(ig => (
-                          <option key={ig.id} value={ig.id}>{ig.name}</option>
-                        ))}
-                      </select>
+                      <IngredientSearch
+                        userId={user?.id || ''}
+                        selectedName={item.ingredient_name || undefined}
+                        onSelect={(ing) => handleIngredientSelect(item.tempId, ing)}
+                      />
+                      {item.ingredient_source && (
+                        <span className="text-[10px] text-muted-foreground">Fonte: {item.ingredient_source}</span>
+                      )}
                     </div>
                     <div className="w-20 space-y-1">
                       <Label className="text-xs">Qtd</Label>
