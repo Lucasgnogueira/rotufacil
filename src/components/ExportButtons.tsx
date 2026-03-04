@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Download, RefreshCw, Loader2, FileText, Image } from 'lucide-react';
+import { Download, RefreshCw, Loader2, FileText, Image, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -31,7 +32,7 @@ export function ExportButtons({
   allergenDecl,
   hasSeals,
 }: ExportButtonsProps) {
-  const { user } = useAuth();
+  const { user, subscription } = useAuth();
   const [loading, setLoading] = useState<LoadingState>({
     table_png: false,
     seals_png: false,
@@ -99,6 +100,21 @@ export function ExportButtons({
       setTypeLoading(type, false);
     }
   };
+
+  if (!subscription.subscribed) {
+    return (
+      <div className="rounded-lg border border-border bg-muted/50 p-6 text-center">
+        <Crown className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+        <p className="mb-1 font-medium text-card-foreground">Recurso premium</p>
+        <p className="mb-3 text-sm text-muted-foreground">
+          A exportação em PNG e PDF está disponível nos planos pagos.
+        </p>
+        <Link to="/pricing">
+          <Button className="gap-2"><Crown className="h-4 w-4" /> Ver planos</Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">

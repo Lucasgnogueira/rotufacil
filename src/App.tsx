@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import RecipeForm from "./pages/RecipeForm";
 import RecipeDetail from "./pages/RecipeDetail";
 import SettingsPage from "./pages/Settings";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 import { ReactNode } from "react";
 
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/auth" element={<PublicOnlyRoute><Auth /></PublicOnlyRoute>} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
             <Route path="/recipe/new" element={<ProtectedRoute><RecipeForm /></ProtectedRoute>} />
             <Route path="/recipe/:id/edit" element={<ProtectedRoute><RecipeForm /></ProtectedRoute>} />
             <Route path="/recipe/:id" element={<ProtectedRoute><RecipeDetail /></ProtectedRoute>} />
