@@ -8,9 +8,9 @@ import { FrontWarningSeals } from '@/components/FrontWarningSeals';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Copy, Download, Clock, Calculator, Loader2 } from 'lucide-react';
+import { Edit, Copy, Clock, Calculator, Loader2 } from 'lucide-react';
+import { ExportButtons } from '@/components/ExportButtons';
 import { toast } from 'sonner';
-import { toPng } from 'html-to-image';
 import {
   computeNutrition,
   checkFrontWarning,
@@ -35,6 +35,7 @@ const RecipeDetail = () => {
   const [allergenDecl, setAllergenDecl] = useState('');
   const [versions, setVersions] = useState<any[]>([]);
   const [computing, setComputing] = useState(false);
+  const [latestVersionId, setLatestVersionId] = useState<string | null>(null);
   const [includeLactose, setIncludeLactose] = useState(false);
   const [includeTraces, setIncludeTraces] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -133,25 +134,14 @@ const RecipeDetail = () => {
         .select('*')
         .eq('recipe_id', id!)
         .order('version_number', { ascending: false });
-      if (v) setVersions(v);
+      if (v) {
+        setVersions(v);
+        setLatestVersionId(v[0]?.id ?? null);
+      }
     }
 
     setComputing(false);
     toast.success('Cálculo concluído e versão salva!');
-  };
-
-  const exportPng = async (ref: React.RefObject<HTMLDivElement>, filename: string) => {
-    if (!ref.current) return;
-    try {
-      const dataUrl = await toPng(ref.current, { pixelRatio: 3, backgroundColor: '#ffffff' });
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = dataUrl;
-      link.click();
-      toast.success(`${filename} exportado!`);
-    } catch {
-      toast.error('Erro ao exportar PNG');
-    }
   };
 
   const copyText = (text: string) => {
@@ -288,15 +278,16 @@ const RecipeDetail = () => {
           <TabsContent value="exportar">
             <Card>
               <CardHeader><CardTitle className="text-base">Exportar</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <Button onClick={() => exportPng(tableRef, `${recipe.name}-tabela.png`)} className="gap-2">
-                  <Download className="h-4 w-4" /> Tabela nutricional (PNG)
-                </Button>
-                {warnings && (warnings.sugar_added || warnings.sat_fat || warnings.sodium) && (
-                  <Button onClick={() => exportPng(sealsRef, `${recipe.name}-selos.png`)} variant="outline" className="gap-2">
-                    <Download className="h-4 w-4" /> Selos "ALTO EM" (PNG)
-                  </Button>
-                )}
+              <CardContent className="space-y-4">
+                <ExportButtons
+                  tableRef={tableRef}
+                  sealsRef={sealsRef}
+                  versionId={latestVersionId}
+                  recipeName={recipe.name}
+                  ingredientsList={ingredientsList}
+                  allergenDecl={allergenDecl}
+                  hasSeals={!!(warnings && (warnings.sugar_added || warnings.sat_fat || warnings.sodium))}
+                />
                 <div>
                   <p className="mb-1 text-sm font-medium text-card-foreground">Versão texto (copiar e colar):</p>
                   <pre className="max-h-40 overflow-auto rounded border border-border bg-muted p-3 text-xs">
