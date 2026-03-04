@@ -222,6 +222,41 @@ export type Database = {
         }
         Relationships: []
       }
+      recipe_exports: {
+        Row: {
+          created_at: string
+          export_type: string
+          id: string
+          owner_user_id: string
+          recipe_version_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          export_type: string
+          id?: string
+          owner_user_id: string
+          recipe_version_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          export_type?: string
+          id?: string
+          owner_user_id?: string
+          recipe_version_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_exports_recipe_version_id_fkey"
+            columns: ["recipe_version_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_items: {
         Row: {
           created_at: string
