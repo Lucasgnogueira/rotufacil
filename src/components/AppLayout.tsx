@@ -2,16 +2,18 @@ import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
-import { FileText, Plus, List, Settings, LogOut } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { FileText, Plus, List, Settings, LogOut, Crown } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', icon: List, label: 'Receitas' },
   { href: '/recipe/new', icon: Plus, label: 'Nova Receita' },
+  { href: '/pricing', icon: Crown, label: 'Planos' },
   { href: '/settings', icon: Settings, label: 'Configurações' },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { signOut } = useAuth();
+  const { signOut, subscription } = useAuth();
   const location = useLocation();
 
   return (
