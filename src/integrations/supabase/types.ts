@@ -85,6 +85,7 @@ export type Database = {
       }
       ingredients: {
         Row: {
+          brand: string | null
           composition_source: string | null
           composition_source_id: string | null
           contains_gluten: boolean | null
@@ -101,13 +102,19 @@ export type Database = {
           is_allergen_soy: boolean | null
           is_allergen_tree_nuts: boolean | null
           is_allergen_wheat: boolean | null
+          item_type: Database["public"]["Enums"]["item_type"]
+          label_base: string | null
+          label_serving_size: number | null
           name: string
           nutrients_per_100: Json
           owner_user_id: string | null
+          source_recipe_id: string | null
+          source_version_id: string | null
           synonyms: string[] | null
           updated_at: string
         }
         Insert: {
+          brand?: string | null
           composition_source?: string | null
           composition_source_id?: string | null
           contains_gluten?: boolean | null
@@ -124,13 +131,19 @@ export type Database = {
           is_allergen_soy?: boolean | null
           is_allergen_tree_nuts?: boolean | null
           is_allergen_wheat?: boolean | null
+          item_type?: Database["public"]["Enums"]["item_type"]
+          label_base?: string | null
+          label_serving_size?: number | null
           name: string
           nutrients_per_100?: Json
           owner_user_id?: string | null
+          source_recipe_id?: string | null
+          source_version_id?: string | null
           synonyms?: string[] | null
           updated_at?: string
         }
         Update: {
+          brand?: string | null
           composition_source?: string | null
           composition_source_id?: string | null
           contains_gluten?: boolean | null
@@ -147,9 +160,14 @@ export type Database = {
           is_allergen_soy?: boolean | null
           is_allergen_tree_nuts?: boolean | null
           is_allergen_wheat?: boolean | null
+          item_type?: Database["public"]["Enums"]["item_type"]
+          label_base?: string | null
+          label_serving_size?: number | null
           name?: string
           nutrients_per_100?: Json
           owner_user_id?: string | null
+          source_recipe_id?: string | null
+          source_version_id?: string | null
           synonyms?: string[] | null
           updated_at?: string
         }
@@ -159,6 +177,20 @@ export type Database = {
             columns: ["composition_source_id"]
             isOneToOne: false
             referencedRelation: "food_composition_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredients_source_recipe_id_fkey"
+            columns: ["source_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredients_source_version_id_fkey"
+            columns: ["source_version_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -291,6 +323,7 @@ export type Database = {
           created_at: string
           household_measure_text: string | null
           id: string
+          is_subproduct: boolean
           name: string
           notes: string | null
           owner_user_id: string
@@ -304,6 +337,7 @@ export type Database = {
           created_at?: string
           household_measure_text?: string | null
           id?: string
+          is_subproduct?: boolean
           name: string
           notes?: string | null
           owner_user_id: string
@@ -317,6 +351,7 @@ export type Database = {
           created_at?: string
           household_measure_text?: string | null
           id?: string
+          is_subproduct?: boolean
           name?: string
           notes?: string | null
           owner_user_id?: string
@@ -359,6 +394,7 @@ export type Database = {
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
+      item_type: "ingredient" | "packaged_product" | "subproduct"
       product_type: "solid" | "liquid"
     }
     CompositeTypes: {
@@ -487,6 +523,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      item_type: ["ingredient", "packaged_product", "subproduct"],
       product_type: ["solid", "liquid"],
     },
   },

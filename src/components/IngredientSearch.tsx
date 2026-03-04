@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Loader2, Database, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Loader2, Database, AlertTriangle, Package, ChefHat } from 'lucide-react';
+import { PackagedProductForm } from '@/components/PackagedProductForm';
 
 interface FoodCompositionMatch {
   id: string;
@@ -28,14 +29,29 @@ interface FoodCompositionMatch {
 interface ExistingIngredient {
   id: string;
   name: string;
+  item_type?: string;
   composition_source?: string | null;
+  brand?: string | null;
+}
+
+interface SubproductRecipe {
+  id: string;
+  name: string;
+  yield_total_g_ml: number;
+  product_type: string;
 }
 
 interface IngredientSearchProps {
-  onSelect: (ingredient: { id: string; name: string; source?: string }) => void;
+  onSelect: (ingredient: { id: string; name: string; source?: string; itemType?: string }) => void;
   userId: string;
   selectedName?: string;
 }
+
+const TYPE_BADGE: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
+  ingredient: { label: 'Ingrediente', variant: 'outline' },
+  packaged_product: { label: 'Produto', variant: 'secondary' },
+  subproduct: { label: 'Subproduto', variant: 'default' },
+};
 
 export function IngredientSearch({ onSelect, userId, selectedName }: IngredientSearchProps) {
   const [query, setQuery] = useState('');
@@ -43,8 +59,10 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
   const [creating, setCreating] = useState(false);
   const [existingMatches, setExistingMatches] = useState<ExistingIngredient[]>([]);
   const [compositionMatches, setCompositionMatches] = useState<FoodCompositionMatch[]>([]);
+  const [subproductMatches, setSubproductMatches] = useState<SubproductRecipe[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
+  const [showProductForm, setShowProductForm] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -70,16 +88,17 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
     if (term.length < 2) {
       setExistingMatches([]);
       setCompositionMatches([]);
+      setSubproductMatches([]);
       return;
     }
     setSearching(true);
     try {
-      // Search existing ingredients (user's + global)
+      // Search existing ingredients (all types)
       const { data: existing } = await supabase
         .from('ingredients')
-        .select('id, name, composition_source')
+        .select('id, name, item_type, composition_source, brand')
         .ilike('name', `%${term}%`)
-        .limit(5);
+        .limit(8);
 
       // Search food composition DB via RPC
       const { data: composition } = await supabase.rpc('search_food_composition', {
@@ -87,8 +106,18 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
         max_results: 5,
       });
 
+      // Search user's recipes marked as subproducts
+      const { data: subRecipes } = await supabase
+        .from('recipes')
+        .select('id, name, yield_total_g_ml, product_type')
+        .eq('is_subproduct', true)
+        .eq('owner_user_id', userId)
+        .ilike('name', `%${term}%`)
+        .limit(5);
+
       setExistingMatches(existing || []);
       setCompositionMatches((composition as FoodCompositionMatch[]) || []);
+      setSubproductMatches(subRecipes || []);
       setShowResults(true);
     } catch (err) {
       console.error('Search error:', err);
@@ -104,7 +133,7 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
   };
 
   const selectExisting = (ing: ExistingIngredient) => {
-    onSelect({ id: ing.id, name: ing.name, source: ing.composition_source || undefined });
+    onSelect({ id: ing.id, name: ing.name, source: ing.composition_source || undefined, itemType: ing.item_type });
     setQuery('');
     setShowResults(false);
   };
@@ -112,11 +141,11 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
   const selectFromComposition = async (match: FoodCompositionMatch) => {
     setCreating(true);
     try {
-      // Create ingredient from composition data
       const nutrients = match.per_100;
       const { data, error } = await supabase.from('ingredients').insert({
         owner_user_id: userId,
         name: match.name_pt,
+        item_type: 'ingredient' as any,
         nutrients_per_100: {
           kcal: nutrients.kcal || 0,
           kj: Math.round((nutrients.kcal || 0) * 4.184),
@@ -146,13 +175,65 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
       }).select('id, name').single();
 
       if (error) throw error;
-      if (data) {
-        onSelect({ id: data.id, name: data.name, source: match.source });
-      }
+      if (data) onSelect({ id: data.id, name: data.name, source: match.source, itemType: 'ingredient' });
       setQuery('');
       setShowResults(false);
     } catch (err: any) {
       console.error('Error creating ingredient from composition:', err);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const selectSubproduct = async (recipe: SubproductRecipe) => {
+    setCreating(true);
+    try {
+      // Get latest version to use its computed nutrients
+      const { data: version } = await supabase
+        .from('recipe_versions')
+        .select('id, results_snapshot')
+        .eq('recipe_id', recipe.id)
+        .order('version_number', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!version) {
+        console.error('Subproduct has no computed version. Calculate it first.');
+        setCreating(false);
+        return;
+      }
+
+      const results = version.results_snapshot as any;
+      const per100 = results?.per_100 || {};
+
+      const { data, error } = await supabase.from('ingredients').insert({
+        owner_user_id: userId,
+        name: `${recipe.name} (subproduto)`,
+        item_type: 'subproduct' as any,
+        nutrients_per_100: {
+          kcal: per100.kcal || 0,
+          kj: per100.kj || 0,
+          carbs_g: per100.carbs_g || 0,
+          sugars_total_g: per100.sugars_total_g || 0,
+          sugars_added_g: per100.sugars_added_g || 0,
+          protein_g: per100.protein_g || 0,
+          fat_total_g: per100.fat_total_g || 0,
+          sat_fat_g: per100.sat_fat_g || 0,
+          trans_fat_g: per100.trans_fat_g || 0,
+          fiber_g: per100.fiber_g || 0,
+          sodium_mg: per100.sodium_mg || 0,
+        },
+        composition_source: 'Subproduto',
+        source_recipe_id: recipe.id,
+        source_version_id: version.id,
+      }).select('id, name').single();
+
+      if (error) throw error;
+      if (data) onSelect({ id: data.id, name: data.name, source: 'Subproduto', itemType: 'subproduct' });
+      setQuery('');
+      setShowResults(false);
+    } catch (err: any) {
+      console.error('Error creating subproduct ingredient:', err);
     } finally {
       setCreating(false);
     }
@@ -166,6 +247,7 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
       const { data, error } = await supabase.from('ingredients').insert({
         owner_user_id: userId,
         name: manualName,
+        item_type: 'ingredient' as any,
         nutrients_per_100: {
           kcal: Number(n.kcal) || 0,
           kj: Math.round((Number(n.kcal) || 0) * 4.184),
@@ -183,9 +265,7 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
       }).select('id, name').single();
 
       if (error) throw error;
-      if (data) {
-        onSelect({ id: data.id, name: data.name, source: 'Manual' });
-      }
+      if (data) onSelect({ id: data.id, name: data.name, source: 'Manual', itemType: 'ingredient' });
       setShowManualForm(false);
       setManualName('');
       setQuery('');
@@ -194,6 +274,11 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
     } finally {
       setCreating(false);
     }
+  };
+
+  const getTypeBadge = (itemType?: string) => {
+    const info = TYPE_BADGE[itemType || 'ingredient'] || TYPE_BADGE.ingredient;
+    return <Badge variant={info.variant} className="text-[10px] shrink-0">{info.label}</Badge>;
   };
 
   return (
@@ -218,7 +303,7 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
             value={query}
             onChange={e => handleInputChange(e.target.value)}
             onFocus={() => { if (query.length >= 2) setShowResults(true); }}
-            placeholder="Buscar ingrediente..."
+            placeholder="Buscar ingrediente, produto ou subproduto..."
             className="h-8 pl-7 text-sm"
           />
           {searching && <Loader2 className="absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />}
@@ -226,22 +311,48 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
       )}
 
       {showResults && (query.length >= 2) && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg max-h-72 overflow-y-auto">
-          {/* Existing ingredients */}
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg max-h-80 overflow-y-auto">
+          {/* Existing ingredients/products */}
           {existingMatches.length > 0 && (
             <div className="p-1">
-              <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Ingredientes cadastrados</p>
+              <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Seus itens cadastrados</p>
               {existingMatches.map(ing => (
                 <button
                   key={ing.id}
                   className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground text-left"
                   onClick={() => selectExisting(ing)}
                 >
-                  <Database className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  {ing.item_type === 'packaged_product' ? (
+                    <Package className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  ) : ing.item_type === 'subproduct' ? (
+                    <ChefHat className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <Database className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  )}
                   <span className="flex-1 truncate">{ing.name}</span>
+                  {getTypeBadge(ing.item_type)}
                   {ing.composition_source && (
                     <Badge variant="outline" className="text-[10px] shrink-0">{ing.composition_source}</Badge>
                   )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Subproduct recipes */}
+          {subproductMatches.length > 0 && (
+            <div className="border-t border-border p-1">
+              <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Subprodutos (receitas-base)</p>
+              {subproductMatches.map(r => (
+                <button
+                  key={r.id}
+                  disabled={creating}
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground text-left disabled:opacity-50"
+                  onClick={() => selectSubproduct(r)}
+                >
+                  <ChefHat className="h-3 w-3 shrink-0 text-primary" />
+                  <span className="flex-1 truncate">{r.name}</span>
+                  <Badge variant="default" className="text-[10px] shrink-0">Subproduto</Badge>
                 </button>
               ))}
             </div>
@@ -270,21 +381,28 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
           )}
 
           {/* No results */}
-          {existingMatches.length === 0 && compositionMatches.length === 0 && !searching && (
+          {existingMatches.length === 0 && compositionMatches.length === 0 && subproductMatches.length === 0 && !searching && (
             <div className="p-3 text-center text-sm text-muted-foreground">
               <AlertTriangle className="mx-auto mb-1 h-4 w-4" />
-              Nenhum ingrediente encontrado para "{query}"
+              Nenhum item encontrado para "{query}"
             </div>
           )}
 
-          {/* Manual create option */}
-          <div className="border-t border-border p-1">
+          {/* Create options */}
+          <div className="border-t border-border p-1 space-y-0.5">
             <button
               className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground text-left"
-              onClick={() => { setShowManualForm(true); setManualName(query); setShowResults(false); }}
+              onClick={() => { setShowManualForm(true); setManualName(query); setShowResults(false); setShowProductForm(false); }}
             >
               <Plus className="h-3 w-3 shrink-0 text-primary" />
-              <span>Criar "{query}" manualmente</span>
+              <span>Criar ingrediente "{query}" manualmente</span>
+            </button>
+            <button
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground text-left"
+              onClick={() => { setShowProductForm(true); setShowManualForm(false); setShowResults(false); }}
+            >
+              <Package className="h-3 w-3 shrink-0 text-primary" />
+              <span>Cadastrar produto industrializado</span>
             </button>
           </div>
         </div>
@@ -319,9 +437,7 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
               <div key={key}>
                 <label className="text-[10px] text-muted-foreground">{label}</label>
                 <Input
-                  type="number"
-                  min="0"
-                  step="0.1"
+                  type="number" min="0" step="0.1"
                   value={manualNutrients[key as keyof typeof manualNutrients]}
                   onChange={e => setManualNutrients(prev => ({ ...prev, [key]: e.target.value }))}
                   className="h-6 text-xs"
@@ -339,6 +455,20 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Packaged product form */}
+      {showProductForm && (
+        <PackagedProductForm
+          userId={userId}
+          initialName={query}
+          onCreated={(ing) => {
+            onSelect({ ...ing, itemType: 'packaged_product' });
+            setShowProductForm(false);
+            setQuery('');
+          }}
+          onCancel={() => setShowProductForm(false)}
+        />
       )}
     </div>
   );

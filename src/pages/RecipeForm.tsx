@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { convertToGrams } from '@/lib/nutrition-engine';
@@ -49,6 +50,7 @@ const RecipeForm = () => {
 
   const [name, setName] = useState('');
   const [productType, setProductType] = useState<'solid' | 'liquid'>('solid');
+  const [isSubproduct, setIsSubproduct] = useState(false);
   const [yieldTotal, setYieldTotal] = useState('');
   const [servingSize, setServingSize] = useState('');
   const [householdMeasure, setHouseholdMeasure] = useState('1 porção');
@@ -86,6 +88,7 @@ const RecipeForm = () => {
         setHouseholdMeasure(recipe.household_measure_text || '1 porção');
         setCookingLoss(String(recipe.cooking_loss_pct || 0));
         setNotes(recipe.notes || '');
+        setIsSubproduct(recipe.is_subproduct || false);
       }
       const { data: recipeItems } = await supabase
         .from('recipe_items')
@@ -204,6 +207,7 @@ const RecipeForm = () => {
             household_measure_text: householdMeasure,
             cooking_loss_pct: Number(cookingLoss),
             notes,
+            is_subproduct: isSubproduct,
           })
           .eq('id', id!);
         if (error) throw error;
@@ -221,6 +225,7 @@ const RecipeForm = () => {
             household_measure_text: householdMeasure,
             cooking_loss_pct: Number(cookingLoss),
             notes,
+            is_subproduct: isSubproduct,
           })
           .select('id')
           .single();
@@ -355,6 +360,15 @@ const RecipeForm = () => {
                 onChange={e => setNotes(e.target.value)}
                 placeholder="Ex: contém aromatizante artificial"
               />
+            </div>
+            <div className="flex items-center gap-3 rounded-md border border-border p-3">
+              <Switch checked={isSubproduct} onCheckedChange={setIsSubproduct} />
+              <div>
+                <Label className="cursor-pointer">Marcar como subproduto</Label>
+                <p className="text-xs text-muted-foreground">
+                  Permite usar esta receita como ingrediente em outras receitas.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
