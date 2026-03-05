@@ -143,7 +143,7 @@ const RecipeForm = () => {
   };
 
   const handleParse = async () => {
-    if (!pasteText.trim()) return;
+    if (!pasteText.trim() || !user) return;
     setParsing(true);
     try {
       const res = await supabase.functions.invoke('parse-recipe', {
@@ -157,22 +157,93 @@ const RecipeForm = () => {
       if (parsed.serving_size) setServingSize(String(parsed.serving_size));
       if (parsed.household_measure) setHouseholdMeasure(parsed.household_measure);
       if (parsed.items && Array.isArray(parsed.items)) {
-        const newItems: RecipeItemLocal[] = parsed.items.map((pi: any) => {
-          const match = allIngredients.find(ig =>
-            ig.name.toLowerCase().includes(pi.name?.toLowerCase() || '') ||
-            pi.name?.toLowerCase().includes(ig.name.toLowerCase())
-          );
-          return {
-            tempId: crypto.randomUUID(),
-            ingredient_id: match?.id || '',
-            ingredient_name: match?.name || pi.name || '⚠ Não encontrado',
-            qty: pi.qty || 0,
-            unit: pi.unit || 'g',
-          };
-        });
+        // Search composition DB for each parsed ingredient in parallel
+        const searchResults = await Promise.all(
+          parsed.items.map(async (pi: any) => {
+            const name = pi.name || '';
+            const { data } = await supabase.rpc('search_food_composition', {
+              search_term: name,
+              max_results: 1,
+            });
+            return { parsed: pi, compositionMatch: data && data.length > 0 ? data[0] : null };
+          })
+        );
+
+        // Auto-create ingredients from composition matches in parallel
+        const newItems = await Promise.all(
+          searchResults.map(async ({ parsed: pi, compositionMatch }) => {
+            if (compositionMatch && compositionMatch.similarity_score > 0.15) {
+              // Create ingredient from composition data
+              const nutrients = compositionMatch.per_100 as any;
+              const { data: created } = await supabase.from('ingredients').insert({
+                owner_user_id: user.id,
+                name: compositionMatch.name_pt,
+                item_type: 'ingredient' as any,
+                nutrients_per_100: {
+                  kcal: nutrients.kcal || 0,
+                  kj: Math.round((nutrients.kcal || 0) * 4.184),
+                  carbs_g: nutrients.carbs_g || 0,
+                  sugars_total_g: nutrients.sugars_total_g || 0,
+                  sugars_added_g: nutrients.sugars_added_g || 0,
+                  protein_g: nutrients.protein_g || 0,
+                  fat_total_g: nutrients.fat_total_g || 0,
+                  sat_fat_g: nutrients.sat_fat_g || 0,
+                  trans_fat_g: nutrients.trans_fat_g || 0,
+                  fiber_g: nutrients.fiber_g || 0,
+                  sodium_mg: nutrients.sodium_mg || 0,
+                },
+                density_g_ml: compositionMatch.density_g_ml,
+                contains_gluten: compositionMatch.contains_gluten,
+                contains_lactose: compositionMatch.contains_lactose,
+                is_allergen_milk: compositionMatch.is_allergen_milk,
+                is_allergen_egg: compositionMatch.is_allergen_egg,
+                is_allergen_wheat: compositionMatch.is_allergen_wheat,
+                is_allergen_soy: compositionMatch.is_allergen_soy,
+                is_allergen_peanut: compositionMatch.is_allergen_peanut,
+                is_allergen_tree_nuts: compositionMatch.is_allergen_tree_nuts,
+                is_allergen_fish: compositionMatch.is_allergen_fish,
+                is_allergen_crustaceans: compositionMatch.is_allergen_crustaceans,
+                composition_source: compositionMatch.source,
+                composition_source_id: compositionMatch.id,
+              }).select('id, name, density_g_ml, grams_per_unit').single();
+
+              if (created) {
+                return {
+                  tempId: crypto.randomUUID(),
+                  ingredient_id: created.id,
+                  ingredient_name: created.name,
+                  ingredient_source: compositionMatch.source,
+                  qty: pi.qty || 0,
+                  unit: pi.unit || 'g',
+                };
+              }
+            }
+            // No match or creation failed — leave unmatched for manual selection
+            return {
+              tempId: crypto.randomUUID(),
+              ingredient_id: '',
+              ingredient_name: pi.name || '⚠ Não encontrado',
+              qty: pi.qty || 0,
+              unit: pi.unit || 'g',
+            };
+          })
+        );
+
         setItems(newItems);
+        // Refresh allIngredients to include newly created ones
+        const { data: refreshed } = await supabase
+          .from('ingredients')
+          .select('id, name, density_g_ml, grams_per_unit')
+          .order('name');
+        if (refreshed) setAllIngredients(refreshed);
+
+        const unmatchedCount = newItems.filter(i => !i.ingredient_id).length;
+        if (unmatchedCount > 0) {
+          toast.success(`Receita interpretada! ${unmatchedCount} ingrediente(s) precisam de seleção manual.`);
+        } else {
+          toast.success('Receita interpretada! Todos os ingredientes foram vinculados automaticamente.');
+        }
       }
-      toast.success('Receita interpretada! Revise os ingredientes abaixo.');
     } catch (err: any) {
       toast.error('Erro ao interpretar receita: ' + (err.message || 'tente novamente'));
     } finally {
