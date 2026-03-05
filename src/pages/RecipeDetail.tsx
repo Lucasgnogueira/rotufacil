@@ -229,7 +229,7 @@ const RecipeDetail = () => {
             <TabsTrigger value="exportar">Exportar</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="tabela">
+          <TabsContent value="tabela" forceMount className="data-[state=inactive]:hidden">
             <Card>
               <CardContent className="overflow-auto p-6">
                 <div ref={tableRef}>
@@ -264,7 +264,7 @@ const RecipeDetail = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="altom">
+          <TabsContent value="altom" forceMount className="data-[state=inactive]:hidden">
             <Card>
               <CardHeader><CardTitle className="text-base">Rotulagem Frontal</CardTitle></CardHeader>
               <CardContent>
