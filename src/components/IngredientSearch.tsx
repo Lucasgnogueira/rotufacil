@@ -63,6 +63,7 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
   const [showResults, setShowResults] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -136,6 +137,7 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
     onSelect({ id: ing.id, name: ing.name, source: ing.composition_source || undefined, itemType: ing.item_type });
     setQuery('');
     setShowResults(false);
+    setIsEditing(false);
   };
 
   const selectFromComposition = async (match: FoodCompositionMatch) => {
@@ -178,6 +180,7 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
       if (data) onSelect({ id: data.id, name: data.name, source: match.source, itemType: 'ingredient' });
       setQuery('');
       setShowResults(false);
+      setIsEditing(false);
     } catch (err: any) {
       console.error('Error creating ingredient from composition:', err);
     } finally {
@@ -232,6 +235,7 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
       if (data) onSelect({ id: data.id, name: data.name, source: 'Subproduto', itemType: 'subproduct' });
       setQuery('');
       setShowResults(false);
+      setIsEditing(false);
     } catch (err: any) {
       console.error('Error creating subproduct ingredient:', err);
     } finally {
@@ -269,6 +273,7 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
       setShowManualForm(false);
       setManualName('');
       setQuery('');
+      setIsEditing(false);
     } catch (err: any) {
       console.error('Error creating manual ingredient:', err);
     } finally {
@@ -283,15 +288,15 @@ export function IngredientSearch({ onSelect, userId, selectedName }: IngredientS
 
   return (
     <div ref={wrapperRef} className="relative">
-      {selectedName && !showResults && !query ? (
+      {selectedName && !showResults && !query && !isEditing ? (
         <div
           className="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm cursor-pointer hover:bg-muted/50"
-          onClick={() => { setQuery(''); setShowResults(false); }}
+          onClick={() => { setIsEditing(true); }}
         >
           <span className="flex-1 truncate">{selectedName}</span>
           <button
             className="text-muted-foreground hover:text-foreground text-xs"
-            onClick={(e) => { e.stopPropagation(); setQuery(''); handleInputChange(''); }}
+            onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
           >
             trocar
           </button>
