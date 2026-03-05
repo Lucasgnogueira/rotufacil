@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { motion } from 'framer-motion';
 import {
-  FileText, Zap, BarChart3, Package, ClipboardCheck, Brain,
+  Zap, BarChart3, Package, ClipboardCheck, Brain,
   ArrowRight, Check, X, ChevronRight, Search, Shield, Timer, DollarSign,
 } from 'lucide-react';
+import logoLight from '@/assets/logo-light.png';
 import { PLANS, PlanKey, formatBRL } from '@/lib/subscription';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -47,11 +48,8 @@ const Landing = () => {
       {/* ─── NAV ─── */}
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-4 py-3 lg:px-8">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <FileText className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-bold tracking-tight text-foreground">RotuFácil</span>
+          <Link to="/" className="flex items-center gap-2">
+            <img src={logoLight} alt="RotuFácil" className="h-9 w-auto" />
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex">
             <a href="#como-funciona" className="transition-colors hover:text-foreground">Como funciona</a>
@@ -195,7 +193,7 @@ const Landing = () => {
               { icon: Package, title: 'Exportação pronta para embalagem', desc: 'PNG em alta resolução e texto formatado.' },
               { icon: Shield, title: 'Conforme normas da ANVISA', desc: 'RDC 429/2020 e IN 75/2020 aplicadas automaticamente.' },
               { icon: Brain, title: 'IA que entende sua receita', desc: 'Interpretação inteligente de ingredientes e quantidades.' },
-              { icon: FileText, title: 'Tudo em um lugar', desc: 'Tabela, ingredientes, alergênicos e selos em uma única tela.' },
+              { icon: ClipboardCheck, title: 'Tudo em um lugar', desc: 'Tabela, ingredientes, alergênicos e selos em uma única tela.' },
             ].map((b, i) => (
               <motion.div key={b.title} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fade} custom={i}
                 className="group rounded-xl border border-border bg-card p-6 transition-shadow hover:shadow-lg">
