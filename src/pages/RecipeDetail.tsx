@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Edit, Copy, Clock, Calculator, Loader2 } from 'lucide-react';
 import { ExportButtons } from '@/components/ExportButtons';
+import { NutritionTableExportStage, FrontWarningExportStage } from '@/components/export/NutritionExportStage';
 import { toast } from 'sonner';
 import {
   computeNutrition,
@@ -38,8 +39,8 @@ const RecipeDetail = () => {
   const [latestVersionId, setLatestVersionId] = useState<string | null>(null);
   const [includeLactose, setIncludeLactose] = useState(false);
   const [includeTraces, setIncludeTraces] = useState(false);
-  const tableRef = useRef<HTMLDivElement>(null);
-  const sealsRef = useRef<HTMLDivElement>(null);
+  const exportTableRef = useRef<HTMLDivElement>(null);
+  const exportSealsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -60,7 +61,19 @@ const RecipeDetail = () => {
         .select('*')
         .eq('recipe_id', id)
         .order('version_number', { ascending: false });
-      if (v) setVersions(v);
+
+      if (v) {
+        setVersions(v);
+
+        const latestVersion = v[0];
+        if (latestVersion) {
+          setLatestVersionId(latestVersion.id ?? null);
+          setResult((latestVersion.results_snapshot ?? null) as unknown as NutritionResult | null);
+          setWarnings((latestVersion.front_warning_flags ?? null) as unknown as FrontWarning | null);
+          setIngredientsList(latestVersion.ingredients_list ?? '');
+          setAllergenDecl(latestVersion.allergen_declarations ?? '');
+        }
+      }
     };
     load();
   }, [id, navigate]);
@@ -116,7 +129,6 @@ const RecipeDetail = () => {
     setIngredientsList(ingList);
     setAllergenDecl(allergens);
 
-    // Save version
     const versionNum = versions.length > 0 ? Math.max(...versions.map(v => v.version_number)) + 1 : 1;
     const { error } = await supabase.from('recipe_versions').insert({
       recipe_id: id!,
@@ -166,7 +178,6 @@ const RecipeDetail = () => {
       .select('id')
       .single();
     if (error) { toast.error('Erro ao duplicar'); return; }
-    // Duplicate items
     const newItems = items.map((i: any) => ({
       recipe_id: data.id,
       ingredient_id: i.ingredient_id,
@@ -207,7 +218,6 @@ const RecipeDetail = () => {
         </div>
       </div>
 
-      {/* Options */}
       <div className="mb-4 flex gap-4">
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={includeLactose} onChange={e => setIncludeLactose(e.target.checked)} className="rounded" />
@@ -232,9 +242,7 @@ const RecipeDetail = () => {
           <TabsContent value="tabela" forceMount className="data-[state=inactive]:hidden">
             <Card>
               <CardContent className="overflow-auto p-6">
-                <div ref={tableRef}>
-                  <NutritionTable result={result} />
-                </div>
+                <NutritionTable result={result} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -268,9 +276,7 @@ const RecipeDetail = () => {
             <Card>
               <CardHeader><CardTitle className="text-base">Rotulagem Frontal</CardTitle></CardHeader>
               <CardContent>
-                <div ref={sealsRef}>
-                  <FrontWarningSeals warnings={warnings} />
-                </div>
+                <FrontWarningSeals warnings={warnings} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -280,8 +286,8 @@ const RecipeDetail = () => {
               <CardHeader><CardTitle className="text-base">Exportar</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <ExportButtons
-                  tableRef={tableRef}
-                  sealsRef={sealsRef}
+                  tableRef={exportTableRef}
+                  sealsRef={exportSealsRef}
                   versionId={latestVersionId}
                   recipeName={recipe.name}
                   ingredientsList={ingredientsList}
@@ -325,7 +331,6 @@ ${allergenDecl}`}
         </Card>
       )}
 
-      {/* Versions */}
       {versions.length > 0 && (
         <Card className="mt-6">
           <CardHeader>
@@ -345,6 +350,9 @@ ${allergenDecl}`}
           </CardContent>
         </Card>
       )}
+
+      {result && <NutritionTableExportStage ref={exportTableRef} result={result} />}
+      {warnings && <FrontWarningExportStage ref={exportSealsRef} warnings={warnings} />}
     </AppLayout>
   );
 };

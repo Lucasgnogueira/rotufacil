@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Download, RefreshCw, Loader2, FileText, Image, Crown } from 'lucide-react';
+import { RefreshCw, Loader2, FileText, Image, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -39,14 +39,22 @@ export function ExportButtons({
     full_pdf: false,
   });
 
-  const setTypeLoading = (type: ExportType, val: boolean) =>
-    setLoading((prev) => ({ ...prev, [type]: val }));
+  const setTypeLoading = (type: ExportType, value: boolean) =>
+    setLoading((previous) => ({ ...previous, [type]: value }));
 
   const downloadFromUrl = (url: string, filename: string) => {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.rel = 'noopener';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  };
+
+  const getLoadingLabel = (type: ExportType) => {
+    if (type === 'full_pdf') return 'Gerando PDF...';
+    return 'Gerando imagem...';
   };
 
   const handleExport = async (type: ExportType, regenerate = false) => {
@@ -56,28 +64,28 @@ export function ExportButtons({
     }
 
     setTypeLoading(type, true);
+
     try {
-      // Check cache first
-      if (!regenerate) {
+      const shouldUseCache = !regenerate && type === 'full_pdf';
+      if (shouldUseCache) {
         const cached = await getCachedExport(versionId, type);
         if (cached) {
-          const ext = type === 'full_pdf' ? 'pdf' : 'png';
-          downloadFromUrl(cached, `${recipeName}.${ext}`);
+          const extension = type === 'full_pdf' ? 'pdf' : 'png';
+          downloadFromUrl(cached, `${recipeName}.${extension}`);
           toast.success('Download iniciado!');
-          setTypeLoading(type, false);
           return;
         }
       }
 
       let url: string;
       if (type === 'table_png') {
-        if (!tableRef.current) throw new Error('Tabela não encontrada');
+        if (!tableRef.current) throw new Error('Tabela de exportação não encontrada');
         url = await exportPngToStorage(tableRef.current, versionId, user.id, 'table_png', recipeName);
       } else if (type === 'seals_png') {
-        if (!sealsRef.current) throw new Error('Selos não encontrados');
+        if (!sealsRef.current) throw new Error('Selos de exportação não encontrados');
         url = await exportPngToStorage(sealsRef.current, versionId, user.id, 'seals_png', recipeName);
       } else {
-        if (!tableRef.current) throw new Error('Tabela não encontrada');
+        if (!tableRef.current) throw new Error('Tabela de exportação não encontrada');
         url = await exportFullPdf(
           tableRef.current,
           sealsRef.current || null,
@@ -89,12 +97,13 @@ export function ExportButtons({
         );
       }
 
-      const ext = type === 'full_pdf' ? 'pdf' : 'png';
-      downloadFromUrl(url, `${recipeName}.${ext}`);
+      const extension = type === 'full_pdf' ? 'pdf' : 'png';
+      downloadFromUrl(url, `${recipeName}.${extension}`);
       toast.success('Exportação concluída!');
-    } catch (err: any) {
-      console.error('Export error:', err);
-      toast.error(`Erro na exportação: ${err.message || 'Tente novamente'}`);
+    } catch (error) {
+      console.error('Export error:', error);
+      const message = error instanceof Error ? error.message : 'Tente novamente';
+      toast.error(`Erro na exportação: ${message}`);
     } finally {
       setTypeLoading(type, false);
     }
@@ -124,7 +133,7 @@ export function ExportButtons({
           className="gap-2"
         >
           {loading.table_png ? <Loader2 className="h-4 w-4 animate-spin" /> : <Image className="h-4 w-4" />}
-          Baixar Tabela (PNG)
+          {loading.table_png ? getLoadingLabel('table_png') : 'Baixar Tabela (PNG)'}
         </Button>
 
         {hasSeals && (
@@ -135,7 +144,7 @@ export function ExportButtons({
             className="gap-2"
           >
             {loading.seals_png ? <Loader2 className="h-4 w-4 animate-spin" /> : <Image className="h-4 w-4" />}
-            Baixar Alto Em (PNG)
+            {loading.seals_png ? getLoadingLabel('seals_png') : 'Baixar Alto Em (PNG)'}
           </Button>
         )}
 
@@ -146,7 +155,7 @@ export function ExportButtons({
           className="gap-2"
         >
           {loading.full_pdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-          Baixar PDF Completo
+          {loading.full_pdf ? getLoadingLabel('full_pdf') : 'Baixar PDF Completo'}
         </Button>
       </div>
 
