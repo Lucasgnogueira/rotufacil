@@ -29,7 +29,7 @@ export async function getCachedExport(
 
   const { data: urlData } = await supabase.storage
     .from('exports')
-    .createSignedUrl(data.storage_path, 3600);
+    .createSignedUrl(data.storage_path, 3600, { download: true });
 
   return urlData?.signedUrl ?? null;
 }
