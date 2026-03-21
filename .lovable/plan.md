@@ -1,28 +1,27 @@
 
 
-## Diagnóstico: Download PNG dos valores nutricionais
+## Problema
 
-### O que já está funcionando
-- Premium override retornando `subscribed: true` para seu email
-- Bibliotecas `html-to-image` e `jspdf` instaladas
-- Bucket de storage `exports` criado com políticas de SELECT e INSERT
-- Tabela `recipe_exports` com RLS configurado
-- Componentes com `forceMount` para manter DOM disponível durante captura
-- Refs (`tableRef`, `sealsRef`) conectados corretamente
+O download abre a URL assinada em uma nova aba em vez de baixar o arquivo. Isso acontece por dois motivos:
 
-### O que está faltando
+1. **`downloadFromUrl` usa `a.target = '_blank'`** -- isso abre em nova aba, ignorando o atributo `download`
+2. **A URL assinada não tem header `Content-Disposition: attachment`** -- o Supabase serve o arquivo inline por padrão
 
-**1. Política de UPDATE no Storage** (bloqueador principal)
-O `export-service.ts` usa `upsert: true` ao fazer upload, o que requer uma política de UPDATE no storage. Atualmente só existem políticas de SELECT e INSERT. Sem isso, o upload falha ao tentar sobrescrever um arquivo existente (e mesmo no primeiro upload, o Supabase pode rejeitar por falta da policy de UPDATE).
+## Solução
 
-**Solução**: Criar migração SQL adicionando policy de UPDATE:
-```sql
-CREATE POLICY "Users can update own exports"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (bucket_id = 'exports' AND (storage.foldername(name))[1] = auth.uid()::text);
-```
+### 1. Usar `download` option do `createSignedUrl`
 
-### Resumo
-Apenas **uma migração** é necessária para adicionar a política de UPDATE no bucket de storage. O resto do fluxo (captura PNG, upload, geração de URL assinada, registro na tabela) já está implementado.
+O método `createSignedUrl` do Supabase aceita um terceiro parâmetro com `{ download: true }` ou `{ download: 'filename.png' }`, que adiciona o header `Content-Disposition: attachment` na URL assinada.
+
+Alterar em dois lugares no `export-service.ts`:
+- `getCachedExport` (linha 30-32)
+- `saveExportRecord` (linha 102-104)
+
+### 2. Remover `a.target = '_blank'` do `downloadFromUrl`
+
+No `ExportButtons.tsx`, remover a linha `a.target = '_blank'` da função `downloadFromUrl` para que o browser use o atributo `download` corretamente em vez de abrir nova aba.
+
+### Arquivos alterados
+- `src/lib/export-service.ts` -- adicionar `{ download: true }` nas chamadas `createSignedUrl`
+- `src/components/ExportButtons.tsx` -- remover `a.target = '_blank'`
 
