@@ -39,6 +39,21 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    // Admin/owner override — grant premium access without Stripe
+    const PREMIUM_EMAILS = ["nogueiral688@gmail.com"];
+    if (PREMIUM_EMAILS.includes(user.email.toLowerCase())) {
+      logStep("Premium override for admin email", { email: user.email });
+      return new Response(JSON.stringify({
+        subscribed: true,
+        price_id: "price_1T7onR2O8cQG3SDGGUA9CtMD",
+        product_id: "prod_U60ptaltyhLoAx",
+        subscription_end: null,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
 
