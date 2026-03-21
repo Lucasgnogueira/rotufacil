@@ -68,8 +68,8 @@ const RecipeDetail = () => {
         const latestVersion = v[0];
         if (latestVersion) {
           setLatestVersionId(latestVersion.id ?? null);
-          setResult((latestVersion.results_snapshot ?? null) as NutritionResult | null);
-          setWarnings((latestVersion.front_warning_flags ?? null) as FrontWarning | null);
+          setResult((latestVersion.results_snapshot ?? null) as unknown as NutritionResult | null);
+          setWarnings((latestVersion.front_warning_flags ?? null) as unknown as FrontWarning | null);
           setIngredientsList(latestVersion.ingredients_list ?? '');
           setAllergenDecl(latestVersion.allergen_declarations ?? '');
         }
