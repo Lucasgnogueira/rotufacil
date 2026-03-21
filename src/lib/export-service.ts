@@ -101,7 +101,7 @@ async function saveExportRecord(
 
   const { data } = await supabase.storage
     .from('exports')
-    .createSignedUrl(storagePath, 3600);
+    .createSignedUrl(storagePath, 3600, { download: true });
 
   return data?.signedUrl ?? '';
 }
