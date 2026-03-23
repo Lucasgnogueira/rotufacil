@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import { Resvg } from "npm:@resvg/resvg-js@2.6.2";
+import { render } from "https://deno.land/x/resvg_wasm@0.2.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -87,14 +87,8 @@ serve(async (req) => {
     const { svg, height } = buildNutritionTableSvg(result);
     logStep("svg-built", { width: WIDTH, height, recipeVersionId });
 
-    const resvg = new Resvg(svg, {
-      fitTo: {
-        mode: "width",
-        value: WIDTH,
-      },
-    });
+    const pngBytes = await render(svg);
 
-    const pngBytes = resvg.render().asPng();
     if (!pngBytes || pngBytes.byteLength === 0) {
       throw new Error("PNG server-side gerado vazio");
     }
@@ -193,140 +187,64 @@ function buildNutritionTableSvg(result: Record<string, any>) {
   const unit = result.product_type === "liquid" ? "ml" : "g";
 
   const rows = [
-    {
-      label: "Valor energético",
-      perServing: `${formatNumber(perServing.kcal)} kcal = ${formatNumber(perServing.kj)} kJ`,
-      per100: `${formatNumber(per100.kcal)} kcal = ${formatNumber(per100.kj)} kJ`,
-      vd: `${formatNumber(vdPerServing.kcal)}%`,
-      thick: true,
-    },
-    {
-      label: "Carboidratos",
-      perServing: `${formatNumber(perServing.carbs_g)} g`,
-      per100: `${formatNumber(per100.carbs_g)} g`,
-      vd: `${formatNumber(vdPerServing.carbs_g)}%`,
-    },
-    {
-      label: "Açúcares totais",
-      perServing: `${formatNumber(perServing.sugars_total_g)} g`,
-      per100: `${formatNumber(per100.sugars_total_g)} g`,
-      vd: "-",
-      indent: true,
-    },
-    {
-      label: "Açúcares adicionados",
-      perServing: `${formatNumber(perServing.sugars_added_g)} g`,
-      per100: `${formatNumber(per100.sugars_added_g)} g`,
-      vd: `${formatNumber(vdPerServing.sugars_added_g)}%`,
-      indent: true,
-    },
-    {
-      label: "Proteínas",
-      perServing: `${formatNumber(perServing.protein_g)} g`,
-      per100: `${formatNumber(per100.protein_g)} g`,
-      vd: `${formatNumber(vdPerServing.protein_g)}%`,
-    },
-    {
-      label: "Gorduras totais",
-      perServing: `${formatNumber(perServing.fat_total_g)} g`,
-      per100: `${formatNumber(per100.fat_total_g)} g`,
-      vd: `${formatNumber(vdPerServing.fat_total_g)}%`,
-    },
-    {
-      label: "Gorduras saturadas",
-      perServing: `${formatNumber(perServing.sat_fat_g)} g`,
-      per100: `${formatNumber(per100.sat_fat_g)} g`,
-      vd: `${formatNumber(vdPerServing.sat_fat_g)}%`,
-      indent: true,
-    },
-    {
-      label: "Gorduras trans",
-      perServing: `${formatNumber(perServing.trans_fat_g)} g`,
-      per100: `${formatNumber(per100.trans_fat_g)} g`,
-      vd: "-",
-      indent: true,
-    },
-    {
-      label: "Fibra alimentar",
-      perServing: `${formatNumber(perServing.fiber_g)} g`,
-      per100: `${formatNumber(per100.fiber_g)} g`,
-      vd: `${formatNumber(vdPerServing.fiber_g)}%`,
-    },
-    {
-      label: "Sódio",
-      perServing: `${formatNumber(perServing.sodium_mg)} mg`,
-      per100: `${formatNumber(per100.sodium_mg)} mg`,
-      vd: `${formatNumber(vdPerServing.sodium_mg)}%`,
-    },
+    { label: "Valor energético", perServing: `${fmt(perServing.kcal)} kcal = ${fmt(perServing.kj)} kJ`, per100: `${fmt(per100.kcal)} kcal = ${fmt(per100.kj)} kJ`, vd: `${fmt(vdPerServing.kcal)}%`, thick: true },
+    { label: "Carboidratos", perServing: `${fmt(perServing.carbs_g)} g`, per100: `${fmt(per100.carbs_g)} g`, vd: `${fmt(vdPerServing.carbs_g)}%` },
+    { label: "Açúcares totais", perServing: `${fmt(perServing.sugars_total_g)} g`, per100: `${fmt(per100.sugars_total_g)} g`, vd: "-", indent: true },
+    { label: "Açúcares adicionados", perServing: `${fmt(perServing.sugars_added_g)} g`, per100: `${fmt(per100.sugars_added_g)} g`, vd: `${fmt(vdPerServing.sugars_added_g)}%`, indent: true },
+    { label: "Proteínas", perServing: `${fmt(perServing.protein_g)} g`, per100: `${fmt(per100.protein_g)} g`, vd: `${fmt(vdPerServing.protein_g)}%` },
+    { label: "Gorduras totais", perServing: `${fmt(perServing.fat_total_g)} g`, per100: `${fmt(per100.fat_total_g)} g`, vd: `${fmt(vdPerServing.fat_total_g)}%` },
+    { label: "Gorduras saturadas", perServing: `${fmt(perServing.sat_fat_g)} g`, per100: `${fmt(per100.sat_fat_g)} g`, vd: `${fmt(vdPerServing.sat_fat_g)}%`, indent: true },
+    { label: "Gorduras trans", perServing: `${fmt(perServing.trans_fat_g)} g`, per100: `${fmt(per100.trans_fat_g)} g`, vd: "-", indent: true },
+    { label: "Fibra alimentar", perServing: `${fmt(perServing.fiber_g)} g`, per100: `${fmt(per100.fiber_g)} g`, vd: `${fmt(vdPerServing.fiber_g)}%` },
+    { label: "Sódio", perServing: `${fmt(perServing.sodium_mg)} mg`, per100: `${fmt(per100.sodium_mg)} mg`, vd: `${fmt(vdPerServing.sodium_mg)}%` },
   ];
 
   const rowHeight = 62;
-  const top = 88;
   const tableTop = 240;
   const footnoteTop = tableTop + rows.length * rowHeight + 54;
   const height = footnoteTop + 120;
 
-  const lineElements = rows
-    .map((row, index) => {
-      const y = tableTop + index * rowHeight;
-      const borderWidth = row.thick ? 8 : 2;
-      return `
-        <line x1="72" y1="${y}" x2="1128" y2="${y}" stroke="#000000" stroke-width="${borderWidth}" />
-        <text x="${row.indent ? 108 : 84}" y="${y + 40}" font-size="28" font-weight="${row.thick ? 700 : 400}" font-family="Arial, Helvetica, sans-serif">${escapeXml(row.label)}</text>
-        <text x="600" y="${y + 40}" font-size="28" font-family="Arial, Helvetica, sans-serif">${escapeXml(row.perServing)}</text>
-        <text x="830" y="${y + 40}" font-size="28" font-family="Arial, Helvetica, sans-serif">${escapeXml(row.per100)}</text>
-        <text x="1070" y="${y + 40}" text-anchor="end" font-size="28" font-family="Arial, Helvetica, sans-serif">${escapeXml(row.vd)}</text>
-      `;
-    })
-    .join("");
+  const lineElements = rows.map((row, index) => {
+    const y = tableTop + index * rowHeight;
+    const borderWidth = row.thick ? 8 : 2;
+    return `
+      <line x1="72" y1="${y}" x2="1128" y2="${y}" stroke="#000000" stroke-width="${borderWidth}" />
+      <text x="${row.indent ? 108 : 84}" y="${y + 40}" font-size="28" font-weight="${row.thick ? 700 : 400}" font-family="Arial, Helvetica, sans-serif">${esc(row.label)}</text>
+      <text x="600" y="${y + 40}" font-size="28" font-family="Arial, Helvetica, sans-serif">${esc(row.perServing)}</text>
+      <text x="830" y="${y + 40}" font-size="28" font-family="Arial, Helvetica, sans-serif">${esc(row.per100)}</text>
+      <text x="1070" y="${y + 40}" text-anchor="end" font-size="28" font-family="Arial, Helvetica, sans-serif">${esc(row.vd)}</text>
+    `;
+  }).join("");
 
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" viewBox="0 0 ${WIDTH} ${height}">
-      <rect width="100%" height="100%" fill="#ffffff" />
-      <rect x="36" y="36" width="1128" height="${height - 72}" fill="#ffffff" stroke="#000000" stroke-width="4" />
-      <text x="72" y="${top}" font-size="54" font-weight="700" font-family="Arial, Helvetica, sans-serif">INFORMAÇÃO NUTRICIONAL</text>
-      <line x1="72" y1="110" x2="1128" y2="110" stroke="#000000" stroke-width="4" />
-      <text x="72" y="156" font-size="28" font-family="Arial, Helvetica, sans-serif">Porção de ${escapeXml(formatNumber(servingSize))}${unit} (${escapeXml(String(householdMeasure))})</text>
-      <line x1="72" y1="196" x2="1128" y2="196" stroke="#000000" stroke-width="2" />
-      <text x="600" y="228" font-size="24" font-weight="700" font-family="Arial, Helvetica, sans-serif">Por porção</text>
-      <text x="830" y="228" font-size="24" font-weight="700" font-family="Arial, Helvetica, sans-serif">Por 100${unit}</text>
-      <text x="1070" y="228" text-anchor="end" font-size="24" font-weight="700" font-family="Arial, Helvetica, sans-serif">%VD*</text>
-      ${lineElements}
-      <line x1="72" y1="${tableTop + rows.length * rowHeight}" x2="1128" y2="${tableTop + rows.length * rowHeight}" stroke="#000000" stroke-width="2" />
-      <text x="72" y="${footnoteTop}" font-size="20" font-family="Arial, Helvetica, sans-serif">* % Valores Diários com base em uma dieta de 2.000 kcal.</text>
-      <text x="72" y="${footnoteTop + 30}" font-size="20" font-family="Arial, Helvetica, sans-serif">Seus valores diários podem ser maiores ou menores dependendo das suas necessidades energéticas.</text>
-    </svg>
-  `;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" viewBox="0 0 ${WIDTH} ${height}">
+    <rect width="100%" height="100%" fill="#ffffff" />
+    <rect x="36" y="36" width="1128" height="${height - 72}" fill="#ffffff" stroke="#000000" stroke-width="4" />
+    <text x="72" y="88" font-size="54" font-weight="700" font-family="Arial, Helvetica, sans-serif">INFORMAÇÃO NUTRICIONAL</text>
+    <line x1="72" y1="110" x2="1128" y2="110" stroke="#000000" stroke-width="4" />
+    <text x="72" y="156" font-size="28" font-family="Arial, Helvetica, sans-serif">Porção de ${esc(fmt(servingSize))}${unit} (${esc(String(householdMeasure))})</text>
+    <line x1="72" y1="196" x2="1128" y2="196" stroke="#000000" stroke-width="2" />
+    <text x="600" y="228" font-size="24" font-weight="700" font-family="Arial, Helvetica, sans-serif">Por porção</text>
+    <text x="830" y="228" font-size="24" font-weight="700" font-family="Arial, Helvetica, sans-serif">Por 100${unit}</text>
+    <text x="1070" y="228" text-anchor="end" font-size="24" font-weight="700" font-family="Arial, Helvetica, sans-serif">%VD*</text>
+    ${lineElements}
+    <line x1="72" y1="${tableTop + rows.length * rowHeight}" x2="1128" y2="${tableTop + rows.length * rowHeight}" stroke="#000000" stroke-width="2" />
+    <text x="72" y="${footnoteTop}" font-size="20" font-family="Arial, Helvetica, sans-serif">* % Valores Diários com base em uma dieta de 2.000 kcal.</text>
+    <text x="72" y="${footnoteTop + 30}" font-size="20" font-family="Arial, Helvetica, sans-serif">Seus valores diários podem ser maiores ou menores dependendo das suas necessidades energéticas.</text>
+  </svg>`;
 
   return { svg, height };
 }
 
-function formatNumber(value: unknown) {
-  if (typeof value === "number") {
-    return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, "");
-  }
-
-  if (typeof value === "string" && value.trim().length > 0) {
-    return value;
-  }
-
+function fmt(value: unknown) {
+  if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, "");
+  if (typeof value === "string" && value.trim().length > 0) return value;
   return "0";
 }
 
-function escapeXml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+function esc(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 function slugify(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "tabela-nutricional";
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "tabela-nutricional";
 }
