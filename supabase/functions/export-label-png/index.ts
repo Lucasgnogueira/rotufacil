@@ -87,10 +87,7 @@ serve(async (req) => {
     const { svg, height } = buildNutritionTableSvg(result);
     logStep("svg-built", { width: WIDTH, height, recipeVersionId });
 
-    const pngBytes = render(svg, {
-      width: WIDTH,
-      fitTo: { mode: "width", value: WIDTH },
-    });
+    const pngBytes = await render(svg);
 
     if (!pngBytes || pngBytes.byteLength === 0) {
       throw new Error("PNG server-side gerado vazio");
