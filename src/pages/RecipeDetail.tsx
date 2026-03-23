@@ -8,7 +8,7 @@ import { FrontWarningSeals } from '@/components/FrontWarningSeals';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Copy, Clock, Calculator, Loader2 } from 'lucide-react';
+import { Edit, Copy, Clock, Calculator, Loader2, FileText } from 'lucide-react';
 import { ExportButtons } from '@/components/ExportButtons';
 import { NutritionTableExportStage, FrontWarningExportStage } from '@/components/export/NutritionExportStage';
 import { toast } from 'sonner';
@@ -285,6 +285,13 @@ const RecipeDetail = () => {
             <Card>
               <CardHeader><CardTitle className="text-base">Exportar</CardTitle></CardHeader>
               <CardContent className="space-y-4">
+                <Button
+                  onClick={() => window.print()}
+                  className="gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Baixar PDF
+                </Button>
                 <ExportButtons
                   tableRef={exportTableRef}
                   sealsRef={exportSealsRef}
@@ -353,6 +360,13 @@ ${allergenDecl}`}
 
       {result && <NutritionTableExportStage ref={exportTableRef} result={result} />}
       {warnings && <FrontWarningExportStage ref={exportSealsRef} warnings={warnings} />}
+
+      {/* Print-only container for window.print() PDF export */}
+      {result && (
+        <div className="print-nutrition-container">
+          <NutritionTable result={result} />
+        </div>
+      )}
     </AppLayout>
   );
 };
