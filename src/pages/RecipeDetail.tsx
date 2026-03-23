@@ -8,7 +8,7 @@ import { FrontWarningSeals } from '@/components/FrontWarningSeals';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Edit, Copy, Clock, Calculator, Loader2 } from 'lucide-react';
+import { Edit, Copy, Clock, Calculator, Loader2, FileText } from 'lucide-react';
 import { ExportButtons } from '@/components/ExportButtons';
 import { NutritionTableExportStage, FrontWarningExportStage } from '@/components/export/NutritionExportStage';
 import { toast } from 'sonner';
