@@ -150,6 +150,11 @@
   flex-shrink: 0;
 }
 
+/* Print container hidden on screen */
+.print-nutrition-container {
+  display: none;
+}
+
 /* ===== Print-only styles for PDF export ===== */
 @media print {
   /* Hide everything */
