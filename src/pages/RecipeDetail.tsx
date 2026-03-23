@@ -360,6 +360,13 @@ ${allergenDecl}`}
 
       {result && <NutritionTableExportStage ref={exportTableRef} result={result} />}
       {warnings && <FrontWarningExportStage ref={exportSealsRef} warnings={warnings} />}
+
+      {/* Print-only container for window.print() PDF export */}
+      {result && (
+        <div className="print-nutrition-container">
+          <NutritionTable result={result} />
+        </div>
+      )}
     </AppLayout>
   );
 };
