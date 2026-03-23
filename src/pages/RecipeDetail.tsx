@@ -285,6 +285,13 @@ const RecipeDetail = () => {
             <Card>
               <CardHeader><CardTitle className="text-base">Exportar</CardTitle></CardHeader>
               <CardContent className="space-y-4">
+                <Button
+                  onClick={() => window.print()}
+                  className="gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Baixar PDF
+                </Button>
                 <ExportButtons
                   tableRef={exportTableRef}
                   sealsRef={exportSealsRef}
