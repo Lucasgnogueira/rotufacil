@@ -4,7 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import { AppLayout } from '@/components/AppLayout';
-import { NutritionTable } from '@/components/NutritionTable';
+import { NutritionLabel } from '@/components/NutritionLabel';
 import { FrontWarningSeals } from '@/components/FrontWarningSeals';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -343,7 +343,7 @@ const RecipeDetail = () => {
           <TabsContent value="tabela" forceMount className="data-[state=inactive]:hidden">
             <Card>
               <CardContent className="overflow-auto p-6">
-                <NutritionTable result={result} />
+                <NutritionLabel result={result} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -485,7 +485,7 @@ ${allergenDecl}`}
               aria-hidden={!showPrintPreview}
             >
               <div className="print-nutrition-paper">
-                <NutritionTable result={result} />
+                <NutritionLabel result={result} />
               </div>
             </div>,
             document.body,
