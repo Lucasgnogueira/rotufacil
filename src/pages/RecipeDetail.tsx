@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Edit, Copy, Clock, Calculator, Loader2, FileText, Eye } from 'lucide-react';
 import { ExportButtons } from '@/components/ExportButtons';
+import { exportLabelPdf } from '@/lib/export-service';
 import { NutritionTableExportStage, FrontWarningExportStage } from '@/components/export/NutritionExportStage';
 import { toast } from 'sonner';
 import {
