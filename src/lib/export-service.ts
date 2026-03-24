@@ -1,5 +1,6 @@
 import { toBlob } from 'html-to-image';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { supabase } from '@/integrations/supabase/client';
 
 export type ExportType = 'table_png' | 'seals_png' | 'full_pdf';
