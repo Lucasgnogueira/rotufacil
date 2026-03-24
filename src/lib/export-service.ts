@@ -482,3 +482,46 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     image.src = src;
   });
 }
+
+/**
+ * Generate a PDF with exact label dimensions (no A4, no margins, single page).
+ * Uses html2canvas to capture the label node, then creates a jsPDF with matching dimensions.
+ */
+export async function exportLabelPdf(node: HTMLElement): Promise<Blob> {
+  await waitForRenderableNode(node, 'label-pdf');
+
+  const canvas = await html2canvas(node, {
+    scale: 3,
+    useCORS: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+    width: node.scrollWidth,
+    height: node.scrollHeight,
+  });
+
+  const imgWidthPx = canvas.width;
+  const imgHeightPx = canvas.height;
+
+  // Convert px to mm at 96 DPI base * scale factor
+  const pxToMm = 25.4 / (96 * 3);
+  const pdfW = imgWidthPx * pxToMm;
+  const pdfH = imgHeightPx * pxToMm;
+
+  const pdf = new jsPDF({
+    orientation: pdfW > pdfH ? 'landscape' : 'portrait',
+    unit: 'mm',
+    format: [pdfW, pdfH],
+  });
+
+  const imgData = canvas.toDataURL('image/png');
+  pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
+
+  const blob = pdf.output('blob');
+  logExport('label-pdf-generated', { pdfW, pdfH, imgWidthPx, imgHeightPx, blobSize: blob.size });
+
+  if (blob.size < MIN_PDF_BYTES) {
+    throw new Error('O PDF gerado parece inválido ou vazio.');
+  }
+
+  return blob;
+}
