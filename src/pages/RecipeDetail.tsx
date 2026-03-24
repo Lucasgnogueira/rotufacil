@@ -343,7 +343,7 @@ const RecipeDetail = () => {
           <TabsContent value="tabela" forceMount className="data-[state=inactive]:hidden">
             <Card>
               <CardContent className="overflow-auto p-6">
-                <NutritionTable result={result} />
+                <NutritionLabel result={result} />
               </CardContent>
             </Card>
           </TabsContent>
