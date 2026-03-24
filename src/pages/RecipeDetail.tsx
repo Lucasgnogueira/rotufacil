@@ -485,7 +485,7 @@ ${allergenDecl}`}
               aria-hidden={!showPrintPreview}
             >
               <div className="print-nutrition-paper">
-                <NutritionTable result={result} />
+                <NutritionLabel result={result} />
               </div>
             </div>,
             document.body,
