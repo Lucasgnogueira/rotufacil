@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Edit, Copy, Clock, Calculator, Loader2, FileText, Eye } from 'lucide-react';
 import { ExportButtons } from '@/components/ExportButtons';
+import { exportLabelPdf } from '@/lib/export-service';
 import { NutritionTableExportStage, FrontWarningExportStage } from '@/components/export/NutritionExportStage';
 import { toast } from 'sonner';
 import {
@@ -156,9 +157,21 @@ const RecipeDetail = () => {
       return;
     }
 
-    window.setTimeout(() => {
-      window.print();
-    }, 80);
+    try {
+      toast.info('Gerando PDF...');
+      const blob = await exportLabelPdf(node);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${recipe?.name || 'rotulo'}_tabela.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('PDF baixado!');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao gerar PDF.');
+    }
   };
 
   const compute = async () => {
